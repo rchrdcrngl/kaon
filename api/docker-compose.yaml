@@ -1,4 +1,47 @@
-version: "1"
+version: "3"
 services:
+  # Eureka Service
+  service-registry:
+    container_name: service-registry
+    build: ./srvcregistry
+    ports:
+      - "8761:8761"
+
+  # API Gateway
+  api-gateway:
+    container_name: api-gateway
+    build: ./gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - service-registry
+    networks:
+      - api
+
+  # User Service & DB
+  users-service:
+    container_name: users-service
+    build: ./users
+    depends_on:
+      - service-registry
+      - users-db
+    networks:
+      - api
+      - users-network
+    ports:
+      - "8080:8080"
+  users-db:
+    image: 'postgres:latest'
+    container_name: users-db
+    networks:
+      - users-network
+    environment:
+      - 'POSTGRES_DB=users-db'
+      - 'POSTGRES_PASSWORD=users8162024'
+      - 'POSTGRES_USER=kaon'
+    ports:
+      - '5432:5432'
+  
 networks:
   api:
+  users-network:
