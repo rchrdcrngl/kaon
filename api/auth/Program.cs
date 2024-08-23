@@ -1,14 +1,25 @@
-using Steeltoe.Connector.PostgreSql.EFCore;
+using AuthenticationAPI.Data;
+using AuthenticationAPI.Services;
+using AuthenticationAPI.Utilities;
+using Microsoft.EntityFrameworkCore;
 using Steeltoe.Discovery.Client;
-using auth.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 builder.Services.AddDiscoveryClient(builder.Configuration);
-builder.Services.AddDbContext<SampleContext>(options => options.UseNpgsql(builder.Configuration));
+//FOR DEVELOPMENT ONLY
+builder.Services.AddDbContext<AuthenticationContext>(options =>
+    options.UseInMemoryDatabase("AuthenticationDb"));
+// Uncomment the following line to use PostgreSQL instead of in-memory database
+// builder.Services.AddDbContext<AuthenticationContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<ITokenProvider, TokenProvider>();
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
 
 var app = builder.Build();
 
@@ -20,29 +31,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseRouting();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast").WithOpenApi();
+app.UseAuthorization();
+app.MapControllers();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
